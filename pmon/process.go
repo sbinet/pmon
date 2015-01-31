@@ -22,6 +22,9 @@ type Process struct {
 	Freq time.Duration
 
 	quit chan struct{}
+
+	fc chan func() error
+	ec chan error
 }
 
 func New(cmd string, args ...string) *Process {
@@ -35,12 +38,17 @@ func New(cmd string, args ...string) *Process {
 		Setpgid: true,
 	}
 
-	return &Process{
+	proc := &Process{
 		Cmd:  c,
 		Freq: 1 * time.Second,
 		W:    ioutil.Discard,
 		quit: make(chan struct{}),
+		fc:   make(chan func() error),
+		ec:   make(chan error),
 	}
+
+	go ptraceRun(proc.fc, proc.ec)
+	return proc
 }
 
 func (p *Process) Run() error {
@@ -80,20 +88,14 @@ func (p *Process) Run() error {
 		)
 	}()
 
-	_, _, err = wait(pid, 0)
+	err = p.wait(pid, 0)
 	if err != nil {
 		return fmt.Errorf("waiting for target execve failed: %s", err)
 	}
 
-	err = syscall.PtraceDetach(pid)
+	err = p.ptraceDetach(pid)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ptrace-error: %v\n\nretry...\n", err)
-		time.Sleep(1 * time.Second)
-		err = syscall.PtraceDetach(pid)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ptrace-error: %v\n", err)
-			return err
-		}
+		return err
 	}
 
 	go p.monitor(collector)

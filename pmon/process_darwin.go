@@ -8,6 +8,12 @@ import (
 	"syscall"
 )
 
-func wait(pid, options int) (int, *syscall.WaitStatus, error) {
-	return 0, nil, nil
+func (p *Process) wait(pid, options int) error {
+	p.fc <- func() error {
+		var err1 error
+		var status syscall.WaitStatus
+		_, err1 = syscall.Wait4(pid, &status, options, nil)
+		return err1
+	}
+	return <-p.ec
 }
