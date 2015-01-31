@@ -1,7 +1,7 @@
 pmon
 ====
 
-`pmon` is a process wrapper for (simple) resource monitoring.
+`pmon` is a process wrapper for (simple) resource monitoring, on Linux and Darwin.
 
 ## Installation
 
@@ -31,3 +31,7 @@ $ cat pmon.data
 # elapsed: 20.01032601s
 # stop: 2015-01-29 12:10:04.705895667 +0100 CET
 ```
+
+## Limitations
+
+- `I/O` monitoring data isn't captured on Darwin
