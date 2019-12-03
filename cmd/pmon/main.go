@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/sbinet/pmon/pmon"
+	"github.com/sbinet/pmon"
 )
 
 var (

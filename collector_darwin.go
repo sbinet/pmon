@@ -32,8 +32,7 @@ func newCollector(pid int) (*collector, error) {
 }
 
 func (c *collector) Close() error {
-	var err error
-	return err
+	return nil
 }
 
 func (c *collector) collect() (Infos, error) {
