@@ -6,17 +6,36 @@ pmon
 ## Installation
 
 ```sh
-$ go get github.com/sbinet/pmon/...
+$> go get github.com/sbinet/pmon/...
 ```
 
 ## Examples
 
 ```sh
-$ pmon my-command arg1 arg2
+$> pmon -h
+pmon monitors process resources usage.
 
-$ pmon -freq=1s -o=pmon.data my-command arg1 arg2
+Usage:
 
-$ cat pmon.data
+ $ pmon [options] command [command-arg1 [command-arg2 [...]]]
+
+Example:
+
+ $ pmon my-command arg0 arg1
+ $ pmon -- my-command arg0 arg1
+
+Options:
+  -freq duration
+    	frequence to capture resource usage (default 1s)
+  -o string
+    	path to file to store resources usage log (default "pmon.data")
+
+$> pmon my-command arg1 arg2
+$> pmon -- my-command arg1 arg2
+$> pmon -freq=1s -o=pmon.data my-command arg1 arg2
+$> pmon -freq=1s -o=pmon.data -- my-command arg1 arg2
+
+$> cat pmon.data
 # pmon: my-command arg1 arg2
 # freq: 1s
 # format: pmon.Infos{CPU:0, UTime:0, STime:0, VMem:0, RSS:0, Threads:0, Rchar:0, Wchar:0, Rdisk:0, Wdisk:0}
