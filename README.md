@@ -6,7 +6,7 @@ pmon
 ## Installation
 
 ```sh
-$ go get github.com/sbinet/pmon
+$ go get github.com/sbinet/pmon/...
 ```
 
 ## Examples
@@ -17,7 +17,7 @@ $ pmon my-command arg1 arg2
 $ pmon -freq=1s -o=pmon.data my-command arg1 arg2
 
 $ cat pmon.data
-# pmon: /home/binet/dev/go/gocode/bin/run-cpu run-cpu
+# pmon: my-command arg1 arg2
 # freq: 1s
 # format: pmon.Infos{CPU:0, UTime:0, STime:0, VMem:0, RSS:0, Threads:0, Rchar:0, Wchar:0, Rdisk:0, Wdisk:0}
 # start: 2015-01-29 12:09:44.695571123 +0100 CET
