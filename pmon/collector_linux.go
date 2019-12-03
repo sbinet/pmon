@@ -6,6 +6,7 @@ package pmon
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -20,13 +21,13 @@ func newCollector(pid int) (*collector, error) {
 	dir := "/proc/" + strconv.Itoa(pid)
 	stat, err := os.Open(dir + "/stat")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not open /proc/%d/stat: %v\n", pid, err)
+		log.Printf("could not open /proc/%d/stat: %+v", pid, err)
 		return nil, err
 	}
 
 	io, err := os.Open(dir + "/io")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not open /proc/%d/io: %v\n", pid, err)
+		log.Printf("could not open /proc/%d/io: %+v", pid, err)
 		return nil, err
 	}
 
@@ -80,7 +81,7 @@ func (c *collector) collect() (Infos, error) {
 
 	_, err := c.stat.Seek(0, 0)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not rewind %s: %v\n", c.stat.Name, err)
+		log.Printf("could not rewind %s: %+v", c.stat.Name, err)
 		return Infos{}, err
 	}
 
@@ -99,13 +100,13 @@ func (c *collector) collect() (Infos, error) {
 		&stat.vsize, &stat.rss,
 	)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error collecting CPU/Mem data: %v\n", err)
+		log.Printf("error collecting CPU/Mem data: %+v", err)
 		return Infos{}, err
 	}
 
 	_, err = c.io.Seek(0, 0)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not rewind %s: %v\n", c.io.Name, err)
+		log.Printf("could not rewind %s: %+v", c.io.Name, err)
 		return Infos{}, err
 	}
 
@@ -125,7 +126,7 @@ func (c *collector) collect() (Infos, error) {
 		&rdisk, &wdisk,
 	)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error collecting I/O data: %v\n", err)
+		log.Printf("error collecting I/O data: %+v", err)
 		return Infos{}, err
 	}
 
@@ -141,7 +142,7 @@ func (c *collector) collect() (Infos, error) {
 		Rdisk:   rdisk / 1024, // in kB
 		Wdisk:   wdisk / 1024, // in kB
 	}
-	return infos, err
+	return infos, nil
 }
 
 /*

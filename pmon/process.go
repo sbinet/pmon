@@ -9,11 +9,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 	"time"
+
+	sys "golang.org/x/sys/unix"
 )
 
 type Process struct {
@@ -33,7 +35,7 @@ func New(cmd string, args ...string) *Process {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 
-	c.SysProcAttr = &syscall.SysProcAttr{
+	c.SysProcAttr = &sys.SysProcAttr{
 		Ptrace:  true,
 		Setpgid: true,
 	}
@@ -52,10 +54,9 @@ func New(cmd string, args ...string) *Process {
 }
 
 func (p *Process) Run() error {
-	err := p.Cmd.Start()
+	err := p.ptraceRun(p.Cmd.Start)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "start-error: %v\n", err)
-		return err
+		return fmt.Errorf("could not start process: %w", err)
 	}
 
 	start := time.Now()
@@ -63,19 +64,19 @@ func (p *Process) Run() error {
 	pid := p.Cmd.Process.Pid
 	collector, err := newCollector(pid)
 	if err != nil {
-		return fmt.Errorf("error creating collector: %v\n", err)
+		return fmt.Errorf("could not create collector: %w", err)
 	}
 	defer collector.Close()
 
 	_, err = fmt.Fprintf(p.W,
-		"# pmon: %s %s\n# freq: %v\n# format: %#v\n# start: %v\n",
-		p.Cmd.Path, strings.Join(p.Cmd.Args, " "),
+		"# pmon: %s\n# freq: %v\n# format: %#v\n# start: %v\n",
+		strings.Join(p.Cmd.Args, " "),
 		p.Freq,
 		Infos{},
 		start,
 	)
 	if err != nil {
-		return fmt.Errorf("error writing log-file header: %v\n", err)
+		return fmt.Errorf("error writing log-file header: %w", err)
 	}
 
 	defer func() {
@@ -90,33 +91,41 @@ func (p *Process) Run() error {
 
 	err = p.wait(pid, 0)
 	if err != nil {
-		return fmt.Errorf("waiting for target execve failed: %s", err)
+		return fmt.Errorf("waiting for target execve failed: %w", err)
 	}
 
 	err = p.ptraceDetach(pid)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not ptrace-detach pid=%d: %w", pid, err)
 	}
 
 	go p.monitor(collector)
 
-	fmt.Fprintf(os.Stderr,
-		"pmon: monitoring... (pid=%d, freq=%v)\n",
+	log.Printf(
+		"monitoring... (pid=%d, freq=%v)\n",
 		p.Cmd.Process.Pid,
 		p.Freq,
 	)
 	err = p.Cmd.Wait()
 	p.quit <- struct{}{}
-	return err
+	if err != nil {
+		return fmt.Errorf("could not wait for pid=%d: %w", pid, err)
+	}
+
+	return nil
 }
 
 func (p *Process) Kill() error {
-	pgid, err := syscall.Getpgid(p.Cmd.Process.Pid)
+	pgid, err := sys.Getpgid(p.Cmd.Process.Pid)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get process group of pid=%d: %w", p.Cmd.Process.Pid, err)
 	}
-	err = syscall.Kill(-pgid, syscall.SIGKILL) // note the minus sign
-	return err
+	err = sys.Kill(-pgid, sys.SIGKILL) // note the minus sign
+	if err != nil {
+		return fmt.Errorf("could not kill process group %d: %w", pgid, err)
+	}
+
+	return nil
 }
 
 func (p *Process) monitor(c *collector) {
@@ -141,7 +150,7 @@ func (p *Process) collect(c *collector) {
 
 	infos, err := c.collect()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error collecting: %v\n", err)
+		log.Printf("error collecting: %+v", err)
 		return
 	}
 

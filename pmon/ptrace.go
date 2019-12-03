@@ -28,3 +28,8 @@ func (p *Process) ptraceDetach(pid int) error {
 	}
 	return <-p.ec
 }
+
+func (p *Process) ptraceRun(f func() error) error {
+	p.fc <- f
+	return <-p.ec
+}

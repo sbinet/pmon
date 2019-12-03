@@ -8,9 +8,10 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/sbinet/pmon/pmon"
@@ -36,16 +37,10 @@ Options:
 `
 )
 
-func printf(format string, args ...interface{}) (int, error) {
-	return fmt.Fprintf(os.Stderr, "pmon: "+format, args...)
-}
-
-func fatalf(format string, args ...interface{}) {
-	printf(format, args...)
-	os.Exit(1)
-}
-
 func main() {
+
+	log.SetFlags(0)
+	log.SetPrefix("pmon: ")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, usage)
@@ -55,22 +50,26 @@ func main() {
 	flag.Parse()
 
 	if flag.NArg() <= 0 {
-		printf("expect a command (and its arguments) as argument\n")
+		log.Printf("expect a command (and its arguments) as argument")
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	err := os.MkdirAll(path.Dir(*out), 0755)
+	err := os.MkdirAll(filepath.Dir(*out), 0755)
 	if err != nil {
-		fatalf("could not create output directory: %v\n", err)
+		log.Fatalf("could not create output directory: %+v", err)
 	}
 
 	cmd := flag.Arg(0)
 	args := flag.Args()[1:]
 
-	f, err := os.Create(*out)
+	run(*out, cmd, args)
+}
+
+func run(out, cmd string, args []string) {
+	f, err := os.Create(out)
 	if err != nil {
-		fatalf("could not create output log file: %v\n", err)
+		log.Fatalf("could not create output log file: %+v", err)
 	}
 	defer f.Close()
 
@@ -88,7 +87,7 @@ func main() {
 			case <-sigch:
 				err = proc.Kill()
 				if err != nil {
-					fatalf("error killing monitored process: %v\n", err)
+					log.Fatalf("error killing monitored process: %+v", err)
 				}
 			}
 		}
@@ -96,18 +95,16 @@ func main() {
 
 	err = proc.Run()
 	if err != nil {
-		fatalf("error monitoring process: %v\n", err)
+		log.Fatalf("error monitoring process: %+v", err)
 	}
 
 	err = w.Flush()
 	if err != nil {
-		fatalf("error flushing log file: %v\n", err)
+		log.Fatalf("error flushing log file: %+v", err)
 	}
 
 	err = f.Close()
 	if err != nil {
-		fatalf("error closing log file: %v\n", err)
+		log.Fatalf("error closing log file: %+v", err)
 	}
-
-	os.Exit(0)
 }
