@@ -30,9 +30,6 @@ Options:
   -o string
     	path to file to store resources usage log (default "pmon.data")
 
-$> pmon my-command arg1 arg2
-$> pmon -- my-command arg1 arg2
-$> pmon -freq=1s -o=pmon.data my-command arg1 arg2
 $> pmon -freq=1s -o=pmon.data -- my-command arg1 arg2
 
 $> cat pmon.data
