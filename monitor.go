@@ -27,7 +27,7 @@ func Monitor(pid int) (*Process, error) {
 	}
 
 	proc.stop = func() error {
-		proc.quit <- struct{}{}
+		close(proc.quit)
 		return nil
 	}
 

@@ -81,6 +81,7 @@ func (p *Process) Run() error {
 }
 
 func (p *Process) runCmd() error {
+	defer close(p.quit)
 	defer func() {
 		if w, ok := p.W.(interface{ Flush() error }); ok {
 			_ = w.Flush()
@@ -140,7 +141,6 @@ func (p *Process) runCmd() error {
 		p.Freq,
 	)
 	err = p.cmd.Wait()
-	p.quit <- struct{}{}
 	if err != nil {
 		return fmt.Errorf("could not wait for pid=%d: %w", pid, err)
 	}
