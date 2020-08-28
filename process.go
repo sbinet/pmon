@@ -107,7 +107,7 @@ func (p *Process) runCmd() error {
 		strings.Join(p.cmd.Args, " "),
 		p.Freq,
 		Infos{},
-		start,
+		start.Format(time.RFC3339Nano),
 	)
 	if err != nil {
 		return fmt.Errorf("error writing log-file header: %w", err)
@@ -119,7 +119,7 @@ func (p *Process) runCmd() error {
 		_, _ = fmt.Fprintf(p.W,
 			"# elapsed: %v\n# stop: %v\n",
 			delta,
-			stop,
+			stop.Format(time.RFC3339Nano),
 		)
 	}()
 
@@ -163,7 +163,7 @@ func (p *Process) runPID() error {
 		p.cmdline(pid),
 		p.Freq,
 		Infos{},
-		start,
+		start.Format(time.RFC3339Nano),
 	)
 	if err != nil {
 		return fmt.Errorf("error writing log-file header: %w", err)
@@ -175,7 +175,7 @@ func (p *Process) runPID() error {
 		_, _ = fmt.Fprintf(p.W,
 			"# elapsed: %v\n# stop: %v\n",
 			delta,
-			stop,
+			stop.Format(time.RFC3339Nano),
 		)
 	}()
 
