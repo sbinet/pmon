@@ -18,7 +18,6 @@ import (
 )
 
 type Process struct {
-	Cmd  *exec.Cmd
 	W    io.Writer
 	Freq time.Duration
 
@@ -26,6 +25,12 @@ type Process struct {
 
 	fc chan func() error
 	ec chan error
+
+	cmd  *exec.Cmd
+	proc *os.Process
+
+	start func() error
+	stop  func() error
 }
 
 func New(cmd string, args ...string) *Process {
@@ -40,12 +45,26 @@ func New(cmd string, args ...string) *Process {
 	}
 
 	proc := &Process{
-		Cmd:  c,
+		cmd:  c,
 		Freq: 1 * time.Second,
 		W:    ioutil.Discard,
 		quit: make(chan struct{}),
 		fc:   make(chan func() error),
 		ec:   make(chan error),
+
+		start: c.Start,
+		stop: func() error {
+			pgid, err := sys.Getpgid(c.Process.Pid)
+			if err != nil {
+				return fmt.Errorf("could not get process group of pid=%d: %w", c.Process.Pid, err)
+			}
+			err = sys.Kill(-pgid, sys.SIGKILL) // note the minus sign
+			if err != nil {
+				return fmt.Errorf("could not kill process group %d: %w", pgid, err)
+			}
+
+			return nil
+		},
 	}
 
 	go ptraceRun(proc.fc, proc.ec)
@@ -53,14 +72,23 @@ func New(cmd string, args ...string) *Process {
 }
 
 func (p *Process) Run() error {
-	err := p.ptraceRun(p.Cmd.Start)
+	switch {
+	case p.cmd != nil:
+		return p.runCmd()
+	default:
+		return p.runPID()
+	}
+}
+
+func (p *Process) runCmd() error {
+	err := p.ptraceRun(p.cmd.Start)
 	if err != nil {
 		return fmt.Errorf("could not start process: %w", err)
 	}
 
 	start := time.Now()
 
-	pid := p.Cmd.Process.Pid
+	pid := p.cmd.Process.Pid
 	collector, err := newCollector(pid)
 	if err != nil {
 		return fmt.Errorf("could not create collector: %w", err)
@@ -69,7 +97,7 @@ func (p *Process) Run() error {
 
 	_, err = fmt.Fprintf(p.W,
 		"# pmon: %s\n# freq: %v\n# format: %#v\n# start: %v\n",
-		strings.Join(p.Cmd.Args, " "),
+		strings.Join(p.cmd.Args, " "),
 		p.Freq,
 		Infos{},
 		start,
@@ -102,10 +130,10 @@ func (p *Process) Run() error {
 
 	log.Printf(
 		"monitoring... (pid=%d, freq=%v)\n",
-		p.Cmd.Process.Pid,
+		p.cmd.Process.Pid,
 		p.Freq,
 	)
-	err = p.Cmd.Wait()
+	err = p.cmd.Wait()
 	p.quit <- struct{}{}
 	if err != nil {
 		return fmt.Errorf("could not wait for pid=%d: %w", pid, err)
@@ -114,17 +142,54 @@ func (p *Process) Run() error {
 	return nil
 }
 
-func (p *Process) Kill() error {
-	pgid, err := sys.Getpgid(p.Cmd.Process.Pid)
+func (p *Process) runPID() error {
+	start := time.Now()
+
+	pid := p.proc.Pid
+	collector, err := newCollector(pid)
 	if err != nil {
-		return fmt.Errorf("could not get process group of pid=%d: %w", p.Cmd.Process.Pid, err)
+		return fmt.Errorf("could not create collector: %w", err)
 	}
-	err = sys.Kill(-pgid, sys.SIGKILL) // note the minus sign
+	defer collector.Close()
+
+	_, err = fmt.Fprintf(p.W,
+		"# pmon: %s\n# freq: %v\n# format: %#v\n# start: %v\n",
+		p.cmdline(pid),
+		p.Freq,
+		Infos{},
+		start,
+	)
 	if err != nil {
-		return fmt.Errorf("could not kill process group %d: %w", pgid, err)
+		return fmt.Errorf("error writing log-file header: %w", err)
+	}
+
+	defer func() {
+		stop := time.Now()
+		delta := time.Since(start)
+		_, _ = fmt.Fprintf(p.W,
+			"# elapsed: %v\n# stop: %v\n",
+			delta,
+			stop,
+		)
+	}()
+
+	go p.monitor(collector)
+
+	log.Printf(
+		"monitoring... (pid=%d, freq=%v)\n",
+		p.proc.Pid,
+		p.Freq,
+	)
+	<-p.quit
+	if err != nil {
+		return fmt.Errorf("could not wait for pid=%d: %w", pid, err)
 	}
 
 	return nil
+}
+
+func (p *Process) Kill() error {
+	return p.stop()
 }
 
 func (p *Process) monitor(c *collector) {
@@ -142,7 +207,7 @@ func (p *Process) monitor(c *collector) {
 
 func (p *Process) collect(c *collector) {
 
-	if p.Cmd.ProcessState != nil {
+	if p.cmd != nil && p.cmd.ProcessState != nil {
 		// process already stopped. nothing to collect.
 		return
 	}

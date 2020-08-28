@@ -16,3 +16,8 @@ func (p *Process) wait(pid, options int) error {
 	}
 	return <-p.ec
 }
+
+func (p *Process) cmdline(pid int) string {
+	// TODO(sbinet)
+	return "<N/A>"
+}
