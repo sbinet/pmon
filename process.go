@@ -81,6 +81,12 @@ func (p *Process) Run() error {
 }
 
 func (p *Process) runCmd() error {
+	defer func() {
+		if w, ok := p.W.(interface{ Flush() error }); ok {
+			_ = w.Flush()
+		}
+	}()
+
 	err := p.ptraceRun(p.cmd.Start)
 	if err != nil {
 		return fmt.Errorf("could not start process: %w", err)
