@@ -1,18 +1,22 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"math"
 	"time"
 )
 
 func main() {
+	timeout := flag.Duration("timeout", 10*time.Second, "lifetime of the process")
+	flag.Parse()
+
 	fmt.Printf("starting...\n")
 	i := 0
 	sum := 0.0
 	mem := make([]byte, 1024)
 
-	stop := time.After(10 * time.Second)
+	stop := time.After(*timeout)
 	tick := time.NewTicker(time.Second)
 	defer tick.Stop()
 
