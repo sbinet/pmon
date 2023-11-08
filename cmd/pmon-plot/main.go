@@ -141,7 +141,8 @@ func run(oname, fname string) {
 				&v.Rdisk, &v.Wdisk,
 			)
 			if err != nil {
-				log.Fatalf("could not scan pmon-info %q: %+v", txt, err)
+				log.Printf("could not scan pmon-info %q: %+v", txt, err)
+				continue
 			}
 			v.CPU = time.Duration(int(cpu * seconds))
 			v.UTime = time.Duration(int(usr * seconds))
