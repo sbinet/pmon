@@ -81,7 +81,7 @@ func (c *collector) collect() (Infos, error) {
 
 	_, err := c.stat.Seek(0, 0)
 	if err != nil {
-		log.Printf("could not rewind %s: %+v", c.stat.Name, err)
+		log.Printf("could not rewind %s: %+v", c.stat.Name(), err)
 		return Infos{}, err
 	}
 
@@ -106,7 +106,7 @@ func (c *collector) collect() (Infos, error) {
 
 	_, err = c.io.Seek(0, 0)
 	if err != nil {
-		log.Printf("could not rewind %s: %+v", c.io.Name, err)
+		log.Printf("could not rewind %s: %+v", c.io.Name(), err)
 		return Infos{}, err
 	}
 
