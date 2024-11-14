@@ -44,7 +44,7 @@ func main() {
 	log.SetPrefix("pmon: ")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, usage)
+		fmt.Fprintf(os.Stderr, "%s", usage)
 		flag.PrintDefaults()
 	}
 
@@ -85,7 +85,7 @@ func runCmd(out, cmd string, args []string) {
 	proc.Freq = *freq
 
 	go func() {
-		sigch := make(chan os.Signal)
+		sigch := make(chan os.Signal, 1)
 		signal.Notify(sigch, os.Interrupt, os.Kill)
 		for {
 			select {
@@ -131,7 +131,7 @@ func runPID(out string, pid int) {
 	proc.Freq = *freq
 
 	go func() {
-		sigch := make(chan os.Signal)
+		sigch := make(chan os.Signal, 1)
 		signal.Notify(sigch, os.Interrupt, os.Kill)
 		for {
 			select {
