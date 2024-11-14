@@ -19,9 +19,8 @@ import (
 
 var (
 	freq = flag.Duration("freq", 1*time.Second, "frequence to capture resource usage")
-	//mon  = flag.String("mon", "cpu,vmem,rss", "comma-separated list of resources to monitor")
-	out = flag.String("o", "pmon.data", "path to file to store resources usage log")
-	pid = flag.Int("p", 0, "PID of an already running process to monitor")
+	out  = flag.String("o", "pmon.data", "path to file to store resources usage log")
+	pid  = flag.Int("p", 0, "PID of an already running process to monitor")
 
 	usage = `pmon monitors process resources usage.
 
