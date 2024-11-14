@@ -1,6 +1,6 @@
 module github.com/sbinet/pmon
 
-go 1.21
+go 1.22
 
 require (
 	go-hep.org/x/hep v0.35.0
