@@ -26,7 +26,8 @@ type Process struct {
 	fc chan func() error
 	ec chan error
 
-	cmd  *exec.Cmd
+	Msg  *log.Logger
+	Cmd  *exec.Cmd
 	proc *os.Process
 
 	start func() error
@@ -46,7 +47,8 @@ func New(cmd string, args ...string) *Process {
 	}
 
 	proc := &Process{
-		cmd:  c,
+		Msg:  log.Default(),
+		Cmd:  c,
 		Freq: 1 * time.Second,
 		W:    io.Discard,
 		quit: make(chan struct{}),
@@ -75,7 +77,7 @@ func New(cmd string, args ...string) *Process {
 // Run starts the monitoring of the current process.
 func (p *Process) Run() error {
 	switch {
-	case p.cmd != nil:
+	case p.Cmd != nil:
 		return p.runCmd()
 	default:
 		return p.runPID()
@@ -90,15 +92,15 @@ func (p *Process) runCmd() error {
 		}
 	}()
 
-	err := p.ptraceRun(p.cmd.Start)
+	err := p.ptraceRun(p.Cmd.Start)
 	if err != nil {
 		return fmt.Errorf("could not start process: %w", err)
 	}
 
 	start := time.Now()
 
-	pid := p.cmd.Process.Pid
-	collector, err := newCollector(pid)
+	pid := p.Cmd.Process.Pid
+	collector, err := newCollector(p.Msg, pid)
 	if err != nil {
 		return fmt.Errorf("could not create collector: %w", err)
 	}
@@ -106,7 +108,7 @@ func (p *Process) runCmd() error {
 
 	_, err = fmt.Fprintf(p.W,
 		"# pmon: %s\n# freq: %v\n# format: %#v\n# start: %v\n",
-		strings.Join(p.cmd.Args, " "),
+		strings.Join(p.Cmd.Args, " "),
 		p.Freq,
 		Infos{},
 		start.Format(time.RFC3339Nano),
@@ -137,12 +139,12 @@ func (p *Process) runCmd() error {
 
 	go p.monitor(collector)
 
-	log.Printf(
+	p.Msg.Printf(
 		"monitoring... (pid=%d, freq=%v)\n",
-		p.cmd.Process.Pid,
+		p.Cmd.Process.Pid,
 		p.Freq,
 	)
-	err = p.cmd.Wait()
+	err = p.Cmd.Wait()
 	if err != nil {
 		return fmt.Errorf("could not wait for pid=%d: %w", pid, err)
 	}
@@ -154,7 +156,7 @@ func (p *Process) runPID() error {
 	start := time.Now()
 
 	pid := p.proc.Pid
-	collector, err := newCollector(pid)
+	collector, err := newCollector(p.Msg, pid)
 	if err != nil {
 		return fmt.Errorf("could not create collector: %w", err)
 	}
@@ -183,7 +185,7 @@ func (p *Process) runPID() error {
 
 	go p.monitor(collector)
 
-	log.Printf(
+	p.Msg.Printf(
 		"monitoring... (pid=%d, freq=%v)\n",
 		p.proc.Pid,
 		p.Freq,
@@ -216,14 +218,14 @@ func (p *Process) monitor(c *collector) {
 
 func (p *Process) collect(c *collector) {
 
-	if p.cmd != nil && p.cmd.ProcessState != nil {
+	if p.Cmd != nil && p.Cmd.ProcessState != nil {
 		// process already stopped. nothing to collect.
 		return
 	}
 
 	infos, err := c.collect()
 	if err != nil {
-		log.Printf("error collecting: %+v", err)
+		p.Msg.Printf("error collecting: %+v", err)
 		return
 	}
 

@@ -13,25 +13,26 @@ import (
 )
 
 type collector struct {
+	msg  *log.Logger
 	stat *os.File
 	io   *os.File
 }
 
-func newCollector(pid int) (*collector, error) {
+func newCollector(msg *log.Logger, pid int) (*collector, error) {
 	dir := "/proc/" + strconv.Itoa(pid)
 	stat, err := os.Open(dir + "/stat")
 	if err != nil {
-		log.Printf("could not open /proc/%d/stat: %+v", pid, err)
+		msg.Printf("could not open /proc/%d/stat: %+v", pid, err)
 		return nil, err
 	}
 
 	io, err := os.Open(dir + "/io")
 	if err != nil {
-		log.Printf("could not open /proc/%d/io: %+v", pid, err)
+		msg.Printf("could not open /proc/%d/io: %+v", pid, err)
 		return nil, err
 	}
 
-	return &collector{stat: stat, io: io}, nil
+	return &collector{msg: msg, stat: stat, io: io}, nil
 }
 
 func (c *collector) Close() error {
@@ -81,7 +82,7 @@ func (c *collector) collect() (Infos, error) {
 
 	_, err := c.stat.Seek(0, 0)
 	if err != nil {
-		log.Printf("could not rewind %s: %+v", c.stat.Name(), err)
+		c.msg.Printf("could not rewind %s: %+v", c.stat.Name(), err)
 		return Infos{}, err
 	}
 
@@ -100,13 +101,13 @@ func (c *collector) collect() (Infos, error) {
 		&stat.vsize, &stat.rss,
 	)
 	if err != nil {
-		log.Printf("error collecting CPU/Mem data: %+v", err)
+		c.msg.Printf("error collecting CPU/Mem data: %+v", err)
 		return Infos{}, err
 	}
 
 	_, err = c.io.Seek(0, 0)
 	if err != nil {
-		log.Printf("could not rewind %s: %+v", c.io.Name(), err)
+		c.msg.Printf("could not rewind %s: %+v", c.io.Name(), err)
 		return Infos{}, err
 	}
 
@@ -126,7 +127,7 @@ func (c *collector) collect() (Infos, error) {
 		&rdisk, &wdisk,
 	)
 	if err != nil {
-		log.Printf("error collecting I/O data: %+v", err)
+		c.msg.Printf("error collecting I/O data: %+v", err)
 		return Infos{}, err
 	}
 
