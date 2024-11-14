@@ -5,13 +5,11 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"image/color"
 	"log"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/sbinet/pmon"
@@ -64,17 +62,6 @@ Options:
 	run(*oname, flag.Arg(0))
 }
 
-// Meta holds metadata about a pmon run.
-type Meta struct {
-	Cmd     string
-	Freq    time.Duration
-	Start   time.Time
-	Elapsed time.Duration
-	Stop    time.Time
-
-	Infos []pmon.Infos
-}
-
 func run(oname, fname string) {
 	f, err := os.Open(fname)
 	if err != nil {
@@ -82,75 +69,14 @@ func run(oname, fname string) {
 	}
 	defer f.Close()
 
-	const layout = time.RFC3339Nano
-	var meta Meta
-
-	sc := bufio.NewScanner(f)
-	for sc.Scan() {
-		txt := strings.TrimSpace(sc.Text())
-		if txt == "" {
-			continue
-		}
-
-		switch txt[0] {
-		case '#':
-			switch {
-			case strings.HasPrefix(txt, "# pmon: "):
-				meta.Cmd = string(txt[len("# pmon: "):])
-
-			case strings.HasPrefix(txt, "# freq: "):
-				v, err := time.ParseDuration(txt[len("# freq: "):])
-				if err != nil {
-					log.Fatalf("could not parse frequency %q: %+v", txt, err)
-				}
-				meta.Freq = v
-
-			case strings.HasPrefix(txt, "# start: "):
-				v, err := time.Parse(layout, txt[len("# start: "):])
-				if err != nil {
-					log.Fatalf("could not parse start time %q: %+v", txt, err)
-				}
-				meta.Start = v
-
-			case strings.HasPrefix(txt, "# elapsed: "):
-				v, err := time.ParseDuration(txt[len("# elapsed: "):])
-				if err != nil {
-					log.Fatalf("could not parse elapsed time %q: %+v", txt, err)
-				}
-				meta.Elapsed = v
-
-			case strings.HasPrefix(txt, "# stop: "):
-				v, err := time.Parse(layout, txt[len("# stop: "):])
-				if err != nil {
-					log.Fatalf("could not parse stop time %q: %+v", txt, err)
-				}
-				meta.Stop = v
-
-			}
-		default:
-			const seconds = 1 / 1000.0
-			var (
-				v   pmon.Infos
-				cpu float64
-				usr float64
-				sys float64
-			)
-			_, err = fmt.Sscanf(txt, "%f %f %f %d %d %d %d %d %d %d",
-				&cpu, &usr, &sys, &v.VMem, &v.RSS,
-				&v.Threads,
-				&v.Rchar, &v.Wchar,
-				&v.Rdisk, &v.Wdisk,
-			)
-			if err != nil {
-				log.Printf("could not scan pmon-info %q: %+v", txt, err)
-				continue
-			}
-			v.CPU = time.Duration(int(cpu * seconds))
-			v.UTime = time.Duration(int(usr * seconds))
-			v.STime = time.Duration(int(sys * seconds))
-			meta.Infos = append(meta.Infos, v)
-		}
+	meta, err := pmon.Parse(f)
+	if err != nil {
+		log.Fatalf("could not parse pmon-data file %q: %+v", fname, err)
 	}
+
+	const (
+		layout = time.RFC3339Nano
+	)
 
 	log.Printf("cmd:   %s", meta.Cmd)
 	log.Printf("freq:  %v", meta.Freq)
@@ -169,7 +95,7 @@ func run(oname, fname string) {
 	}
 }
 
-func doVMem(p *hplot.Plot, meta Meta) {
+func doVMem(p *hplot.Plot, meta pmon.Meta) {
 	const MB = 1 / 1024.0
 
 	xs := make([]float64, len(meta.Infos))
@@ -190,7 +116,7 @@ func doVMem(p *hplot.Plot, meta Meta) {
 	p.Add(s2, hplot.NewGrid())
 }
 
-func doRSS(p *hplot.Plot, meta Meta) {
+func doRSS(p *hplot.Plot, meta pmon.Meta) {
 	const MB = 1 / 1024.0
 
 	xs := make([]float64, len(meta.Infos))
