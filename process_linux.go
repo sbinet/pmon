@@ -6,7 +6,7 @@ package pmon
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	sys "golang.org/x/sys/unix"
 )
@@ -21,7 +21,7 @@ func (p *Process) wait(pid, options int) error {
 }
 
 func (p *Process) cmdline(pid int) string {
-	cmd, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+	cmd, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
 	if err != nil {
 		return "<N/A>"
 	}

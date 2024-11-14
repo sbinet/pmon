@@ -6,7 +6,7 @@ package pmon
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"time"
 )
@@ -19,7 +19,7 @@ func Monitor(pid int) (*Process, error) {
 
 	proc := &Process{
 		Freq:  1 * time.Second,
-		W:     ioutil.Discard,
+		W:     io.Discard,
 		quit:  make(chan struct{}),
 		start: func() error { return nil },
 

@@ -7,7 +7,6 @@ package pmon
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -47,7 +46,7 @@ func New(cmd string, args ...string) *Process {
 	proc := &Process{
 		cmd:  c,
 		Freq: 1 * time.Second,
-		W:    ioutil.Discard,
+		W:    io.Discard,
 		quit: make(chan struct{}),
 		fc:   make(chan func() error),
 		ec:   make(chan error),
