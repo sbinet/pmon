@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// Monitor monitors the resources usage of the process with the provided id.
 func Monitor(pid int) (*Process, error) {
 	p, err := os.FindProcess(pid)
 	if err != nil {

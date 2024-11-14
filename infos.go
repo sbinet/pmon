@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Infos holds monitoring informations gathered during monitoring.
 type Infos struct {
 	CPU     time.Duration `json:"cpu"`      // user+system time (ms)
 	UTime   time.Duration `json:"usr"`      // user time (ms)

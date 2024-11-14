@@ -64,6 +64,7 @@ Options:
 	run(*oname, flag.Arg(0))
 }
 
+// Meta holds metadata about a pmon run.
 type Meta struct {
 	Cmd     string
 	Freq    time.Duration

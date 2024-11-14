@@ -2,5 +2,5 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// package pmon monitors the resources of a process.
+// Package pmon monitors the resources of a process.
 package pmon // import "github.com/sbinet/pmon"

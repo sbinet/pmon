@@ -16,6 +16,7 @@ import (
 	sys "golang.org/x/sys/unix"
 )
 
+// Process holds informations about a process created by New or Monitor.
 type Process struct {
 	W    io.Writer
 	Freq time.Duration
@@ -32,6 +33,7 @@ type Process struct {
 	stop  func() error
 }
 
+// New creates a new process named cmd and with the provided arguments.
 func New(cmd string, args ...string) *Process {
 	c := exec.Command(cmd, args...)
 	c.Stdin = os.Stdin
@@ -70,6 +72,7 @@ func New(cmd string, args ...string) *Process {
 	return proc
 }
 
+// Run starts the monitoring of the current process.
 func (p *Process) Run() error {
 	switch {
 	case p.cmd != nil:
@@ -193,6 +196,7 @@ func (p *Process) runPID() error {
 	return nil
 }
 
+// Kill causes the monitored process to exit immediately.
 func (p *Process) Kill() error {
 	return p.stop()
 }
